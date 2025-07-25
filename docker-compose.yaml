@@ -1,0 +1,19 @@
+version: '3'
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - litellm-proxy
+
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-latest
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    command: >
+      --model groq/llama3-8b-8192
+    ports:
+      - "4000:4000"
