@@ -1,69 +1,121 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Lavender Light Theme */
+    --background: 280 100% 98%;
+    --foreground: 300 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 300 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 300 10% 15%;
+
+    --primary: 280 65% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 280 30% 90%;
+    --secondary-foreground: 300 10% 15%;
+
+    --muted: 280 20% 95%;
+    --muted-foreground: 300 8% 45%;
+
+    --accent: 280 40% 85%;
+    --accent-foreground: 300 10% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 280 20% 88%;
+    --input: 280 20% 88%;
+    --ring: 280 65% 60%;
+
+    --radius: 0.75rem;
+
+    /* Chat specific colors */
+    --chat-user-bg: 280 65% 60%;
+    --chat-user-text: 0 0% 100%;
+    --chat-bot-bg: 280 20% 95%;
+    --chat-bot-text: 300 10% 15%;
+
+    /* Sidebar colors */
+    --sidebar-background: 280 30% 96%;
+    --sidebar-foreground: 300 10% 15%;
+    --sidebar-primary: 280 65% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 280 40% 85%;
+    --sidebar-accent-foreground: 300 10% 15%;
+    --sidebar-border: 280 20% 88%;
+    --sidebar-ring: 280 65% 60%;
+
+    /* Container status colors */
+    --status-running: 142 76% 36%;
+    --status-stopped: 0 84% 60%;
+    --status-paused: 45 93% 47%;
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    /* Lavender Dark Theme */
+    --background: 280 20% 8%;
+    --foreground: 280 15% 95%;
+
+    --card: 280 15% 12%;
+    --card-foreground: 280 15% 95%;
+
+    --popover: 280 15% 12%;
+    --popover-foreground: 280 15% 95%;
+
+    --primary: 280 65% 70%;
+    --primary-foreground: 280 20% 8%;
+
+    --secondary: 280 15% 18%;
+    --secondary-foreground: 280 15% 95%;
+
+    --muted: 280 10% 15%;
+    --muted-foreground: 280 10% 65%;
+
+    --accent: 280 20% 25%;
+    --accent-foreground: 280 15% 95%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 280 15% 95%;
+
+    --border: 280 15% 18%;
+    --input: 280 15% 18%;
+    --ring: 280 65% 70%;
+
+    /* Chat specific colors - dark mode */
+    --chat-user-bg: 280 65% 70%;
+    --chat-user-text: 280 20% 8%;
+    --chat-bot-bg: 280 15% 18%;
+    --chat-bot-text: 280 15% 95%;
+
+    /* Sidebar colors - dark mode */
+    --sidebar-background: 280 15% 10%;
+    --sidebar-foreground: 280 15% 95%;
+    --sidebar-primary: 280 65% 70%;
+    --sidebar-primary-foreground: 280 20% 8%;
+    --sidebar-accent: 280 20% 20%;
+    --sidebar-accent-foreground: 280 15% 95%;
+    --sidebar-border: 280 15% 18%;
+    --sidebar-ring: 280 65% 70%;
+
+    /* Container status colors - dark mode */
+    --status-running: 142 76% 46%;
+    --status-stopped: 0 84% 70%;
+    --status-paused: 45 93% 57%;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
   }
 }
