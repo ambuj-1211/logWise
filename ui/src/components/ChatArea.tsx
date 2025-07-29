@@ -1,7 +1,8 @@
-import { MessageCircle, Send, Square } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage, Container } from "@/types/container";
@@ -49,23 +50,6 @@ function EmptyState() {
   );
 }
 
-function StoppedContainerState({ container }: { container: Container }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-      <div className="h-16 w-16 rounded-full bg-status-stopped flex items-center justify-center">
-        <Square className="h-8 w-8 text-white" />
-      </div>
-      <div>
-        <h3 className="text-lg font-medium text-foreground">Container is not running</h3>
-        <p className="text-muted-foreground mt-2">
-          The container <span className="font-medium text-foreground">{container.name}</span> is currently stopped. 
-          Start the container to enable chat functionality.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export function ChatArea({ container, messages, onSendMessage }: ChatAreaProps) {
   const [inputValue, setInputValue] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -98,15 +82,6 @@ export function ChatArea({ container, messages, onSendMessage }: ChatAreaProps) 
     );
   }
 
-  // Show stopped container state if container is not running
-  if (container.status !== 'running') {
-    return (
-      <div className="flex-1 bg-background">
-        <StoppedContainerState container={container} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col bg-background">
       {/* Header */}
@@ -124,9 +99,32 @@ export function ChatArea({ container, messages, onSendMessage }: ChatAreaProps) 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>You are now talking to <span className="font-medium text-foreground">{container.name}</span> with id <span className="font-medium text-foreground">{container.id}</span></p>
+            <div className="space-y-6">
+              <div className="text-center text-muted-foreground py-4">
+                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>You are now talking to <span className="font-medium text-foreground">{container.name}</span> with id <span className="font-medium text-foreground">{container.id}</span></p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                {[
+                  "What errors occurred in the logs?",
+                  "Show me the startup sequence",
+                  "What are the most recent log entries?",
+                  "Are there any warning messages?",
+                  "What processes are running?",
+                  "Show me network-related logs",
+                  "What configuration changes were made?",
+                  "Are there any performance issues?"
+                ].map((suggestion, index) => (
+                  <Card 
+                    key={index}
+                    className="p-4 cursor-pointer hover:bg-accent hover:shadow-md transition-all duration-200 border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl bg-card/50"
+                    onClick={() => onSendMessage(suggestion)}
+                  >
+                    <p className="text-sm text-foreground font-medium leading-relaxed">{suggestion}</p>
+                  </Card>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((message) => (

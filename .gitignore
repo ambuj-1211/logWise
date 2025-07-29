@@ -9,7 +9,7 @@ ui/.vite/
 
 # Environment variables
 .env
-backend/.env
+./backend/.env
 *.env
 
 # Python
