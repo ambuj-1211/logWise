@@ -5,15 +5,8 @@ services:
     env_file:
       - ./backend/.env
     ports:
-      - "5000:5000"
-    depends_on:
-      - litellm-proxy
-
-  litellm-proxy:
-    image: ghcr.io/berriai/litellm:main-latest
+      - "8000:8000"
+    volumes:
+      - ./backend/chroma_db:/app/chroma_db
     environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-    command: >
-      --model groq/llama3-8b-8192
-    ports:
-      - "4000:4000"
+      - CHROMA_PERSIST_DIR=/app/chroma_db
