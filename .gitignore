@@ -21,7 +21,6 @@ __pycache__/
 backend/.venv/
 backend/venv/
 backend/env/
-backend/.env/
 *.egg-info/
 .pytest_cache/
 
