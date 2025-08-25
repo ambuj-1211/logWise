@@ -11,14 +11,16 @@ from typing import Any, Dict, List, Optional, Tuple
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
+load_dotenv()
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
 class LogChunk(BaseModel):
-    """Enhanced model for log chunk data with comprehensive metadata."""
+    """Model for log chunk data with comprehensive metadata."""
     text: str
     container_id: str
     container_name: str
@@ -39,18 +41,10 @@ class LogChunk(BaseModel):
     char_count: int = 0
     log_level: str = "info"  # error, warn, info, debug
     source: str = "docker_logs"
-    
-    # Enhanced metadata for better search
-    log_type: str = "general"  # error, warning, info, debug, system, application
-    severity_score: float = 0.0  # 0.0 to 1.0 for error severity
-    has_error: bool = False
-    has_warning: bool = False
-    error_count: int = 0
-    warning_count: int = 0
 
 
-class EnhancedVectorStore:
-    """Enhanced ChromaDB vector store with multiple indexing strategies."""
+class VectorStore:
+    """ChromaDB vector store with multiple indexing strategies."""
     
     def __init__(self, persist_directory: str = "./chroma_db"):
         """Initialize ChromaDB client and collections with enhanced schema."""
@@ -73,24 +67,12 @@ class EnhancedVectorStore:
             self._init_collections()
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize vector store: {str(e)}")
+            logger.error(f"Failed to initialize vector store: {str(e)}")
             raise
     
     def _init_collections(self):
         """Initialize collections with different indexing strategies."""
-        logger.info("📚 Initializing collections with enhanced schema...")
-        
-        # Main collection with comprehensive metadata
-        self.main_collection = self.client.get_or_create_collection(
-            name="docker_logs_main",
-            metadata={
-                "description": "Main Docker log chunks with comprehensive metadata",
-                "created_at": datetime.now().isoformat(),
-                "version": "3.0",
-                "indexing": "flat"  # Flat indexing for exact similarity
-            }
-        )
-        logger.info("📚 Main collection 'docker_logs_main' ready")
+        logger.info("📚 Initializing collections with schema...")
         
         # Fast collection with ANN indexing for approximate search
         self.fast_collection = self.client.get_or_create_collection(
@@ -99,24 +81,12 @@ class EnhancedVectorStore:
                 "description": "Fast Docker log chunks with ANN indexing",
                 "created_at": datetime.now().isoformat(),
                 "version": "3.0",
-                "indexing": "ann"  # Approximate nearest neighbor
+                "indexing": "ann"
             }
         )
         logger.info("📚 Fast collection 'docker_logs_fast' ready")
-        
-        # Error-focused collection for error analysis
-        self.error_collection = self.client.get_or_create_collection(
-            name="docker_logs_errors",
-            metadata={
-                "description": "Error-focused log chunks for error analysis",
-                "created_at": datetime.now().isoformat(),
-                "version": "3.0",
-                "indexing": "flat"
-            }
-        )
-        logger.info("📚 Error collection 'docker_logs_errors' ready")
     
-    def _enhance_metadata(self, chunk: LogChunk) -> Dict[str, Any]:
+    def _metadata(self, chunk: LogChunk) -> Dict[str, Any]:
         """Enhance metadata with additional searchable fields."""
         # Calculate severity score based on log level
         severity_map = {
@@ -142,7 +112,7 @@ class EnhancedVectorStore:
         elif "system" in chunk.text.lower():
             log_type = "system"
         
-        enhanced_metadata = {
+        metadata = {
             "container_id": chunk.container_id,
             "container_name": chunk.container_name,
             "container_status": chunk.container_status,
@@ -165,7 +135,7 @@ class EnhancedVectorStore:
             **chunk.metadata
         }
         
-        return enhanced_metadata
+        return metadata
     
     async def upsert_chunks(self, chunks: List[LogChunk], embeddings: List[List[float]]):
         """
@@ -181,16 +151,16 @@ class EnhancedVectorStore:
             # Prepare data for all collections
             ids = [chunk.chunk_id for chunk in chunks]
             texts = [chunk.text for chunk in chunks]
-            metadatas = [self._enhance_metadata(chunk) for chunk in chunks]
+            metadatas = [self._metadata(chunk) for chunk in chunks]
             
             # Upsert to main collection (flat indexing)
-            logger.info("📝 Upserting to main collection...")
-            self.main_collection.upsert(
-                ids=ids,
-                embeddings=embeddings,
-                documents=texts,
-                metadatas=metadatas
-            )
+            # logger.info("📝 Upserting to main collection...")
+            # self.main_collection.upsert(
+            #     ids=ids,
+            #     embeddings=embeddings,
+            #     documents=texts,
+            #     metadatas=metadatas
+            # )
             
             # Upsert to fast collection (ANN indexing)
             logger.info("📝 Upserting to fast collection...")
@@ -201,29 +171,30 @@ class EnhancedVectorStore:
                 metadatas=metadatas
             )
             
+            #TODO: Future development for the adding the seperate collection for errors or other categories.
             # Upsert error chunks to error collection
-            error_chunks = []
-            error_embeddings = []
-            error_metadatas = []
-            error_ids = []
+            # error_chunks = []
+            # error_embeddings = []
+            # error_metadatas = []
+            # error_ids = []
             
-            for i, chunk in enumerate(chunks):
-                if chunk.log_level == "error" or "error" in chunk.text.lower():
-                    error_chunks.append(chunk)
-                    error_embeddings.append(embeddings[i])
-                    error_metadatas.append(metadatas[i])
-                    error_ids.append(ids[i])
+            # for i, chunk in enumerate(chunks):
+            #     if chunk.log_level == "error" or "error" in chunk.text.lower():
+            #         error_chunks.append(chunk)
+            #         error_embeddings.append(embeddings[i])
+            #         error_metadatas.append(metadatas[i])
+            #         error_ids.append(ids[i])
             
-            if error_chunks:
-                logger.info(f"📝 Upserting {len(error_chunks)} error chunks to error collection...")
-                self.error_collection.upsert(
-                    ids=error_ids,
-                    embeddings=error_embeddings,
-                    documents=[chunk.text for chunk in error_chunks],
-                    metadatas=error_metadatas
-                )
+            # if error_chunks:
+            #     logger.info(f"📝 Upserting {len(error_chunks)} error chunks to error collection...")
+            #     self.error_collection.upsert(
+            #         ids=error_ids,
+            #         embeddings=error_embeddings,
+            #         documents=[chunk.text for chunk in error_chunks],
+            #         metadatas=error_metadatas
+            #     )
             
-            logger.info(f"✅ Successfully upserted {len(chunks)} chunks to all collections")
+            # logger.info(f"✅ Successfully upserted {len(chunks)} chunks to all collections")
             
         except Exception as e:
             logger.error(f"❌ Failed to upsert chunks: {str(e)}")
@@ -234,11 +205,10 @@ class EnhancedVectorStore:
         query_embedding: List[float], 
         container_id: Optional[str] = None,
         k: int = 8,
-        use_fast_index: bool = False,
         log_level: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Query for similar log chunks with enhanced filtering.
+        Query for similar log chunks with filtering.
         
         Args:
             query_embedding: Query embedding vector
@@ -255,12 +225,11 @@ class EnhancedVectorStore:
             logger.info(f"🎯 Filtering by container: {container_id}")
         if log_level:
             logger.info(f"🎯 Filtering by log level: {log_level}")
-        logger.info(f"📊 Using {'fast' if use_fast_index else 'main'} collection")
         logger.info(f"🎯 Requesting top {k} results")
         
         try:
             # Choose collection based on indexing strategy
-            collection = self.fast_collection if use_fast_index else self.main_collection
+            collection = self.fast_collection
             
             # Build query parameters
             query_params = {
@@ -286,6 +255,7 @@ class EnhancedVectorStore:
             documents = []
             for i in range(len(results["documents"][0])):
                 doc = {
+                    "ids": results["ids"][i],
                     "text": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
                     "distance": results["distances"][0][i] if "distances" in results else None
@@ -296,103 +266,7 @@ class EnhancedVectorStore:
             return documents
             
         except Exception as e:
-            logger.error(f"❌ Failed to query similar chunks: {str(e)}")
             raise Exception(f"Failed to query similar chunks: {str(e)}")
-    
-    async def query_errors(
-        self, 
-        query_embedding: List[float], 
-        container_id: Optional[str] = None,
-        k: int = 8
-    ) -> List[Dict[str, Any]]:
-        """
-        Query specifically for error logs.
-        
-        Args:
-            query_embedding: Query embedding vector
-            container_id: Optional container ID to search within
-            k: Number of results to return
-            
-        Returns:
-            List of error documents with metadata
-        """
-        logger.info(f"🔍 Querying error collection")
-        
-        try:
-            query_params = {
-                "query_embeddings": [query_embedding],
-                "n_results": k
-            }
-            
-            if container_id:
-                query_params["where"] = {"container_id": container_id}
-            
-            results = self.error_collection.query(**query_params)
-            
-            logger.info(f"📚 Error collection returned {len(results['documents'][0])} results")
-            
-            # Format results
-            documents = []
-            for i in range(len(results["documents"][0])):
-                doc = {
-                    "text": results["documents"][0][i],
-                    "metadata": results["metadatas"][0][i],
-                    "distance": results["distances"][0][i] if "distances" in results else None
-                }
-                documents.append(doc)
-            
-            return documents
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to query errors: {str(e)}")
-            raise Exception(f"Failed to query errors: {str(e)}")
-    
-    async def get_container_logs(
-        self, 
-        container_id: str, 
-        limit: int = 100,
-        log_level: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        Get all log chunks for a specific container with optional filtering.
-        
-        Args:
-            container_id: Container ID to get logs for
-            limit: Maximum number of chunks to return
-            log_level: Optional log level filter
-            
-        Returns:
-            List of log chunks with metadata
-        """
-        logger.info(f"📋 Getting logs for container: {container_id}")
-        
-        try:
-            where_clause = {"container_id": container_id}
-            if log_level:
-                where_clause["log_level"] = log_level
-            
-            results = self.main_collection.get(
-                where=where_clause,
-                limit=limit
-            )
-            
-            logger.info(f"📄 Found {len(results['ids'])} chunks for container {container_id}")
-            
-            # Format results
-            documents = []
-            for i in range(len(results["ids"])):
-                doc = {
-                    "text": results["documents"][i],
-                    "metadata": results["metadatas"][i],
-                    "id": results["ids"][i]
-                }
-                documents.append(doc)
-            
-            return documents
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to get container logs: {str(e)}")
-            raise Exception(f"Failed to get container logs: {str(e)}")
     
     async def delete_container_logs(self, container_id: str):
         """
@@ -427,21 +301,16 @@ class EnhancedVectorStore:
         
         try:
             stats = {
-                "main_collection": {
-                    "name": "docker_logs_main",
-                    "count": self.main_collection.count(),
-                    "indexing": "flat"
-                },
                 "fast_collection": {
                     "name": "docker_logs_fast", 
                     "count": self.fast_collection.count(),
                     "indexing": "ann"
                 },
-                "error_collection": {
-                    "name": "docker_logs_errors",
-                    "count": self.error_collection.count(),
-                    "indexing": "flat"
-                }
+                # "error_collection": {
+                #     "name": "docker_logs_errors",
+                #     "count": self.error_collection.count(),
+                #     "indexing": "flat"
+                # }
             }
             
             # Get unique containers
@@ -464,6 +333,5 @@ class EnhancedVectorStore:
             logger.error(f"❌ Failed to get stats: {str(e)}")
             return {"error": str(e)}
 
-
 # Global enhanced vector store instance
-vector_store = EnhancedVectorStore() 
+vector_store = VectorStore() 

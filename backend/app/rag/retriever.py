@@ -1,5 +1,5 @@
 """
-Enhanced RAG retriever with two-stage pipeline: vector similarity + reranking.
+RAG retriever with two-stage pipeline: vector similarity + reranking.
 """
 import asyncio
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class RAGRetriever:
-    """Enhanced RAG retriever with two-stage retrieval pipeline."""
+    """RAG retriever with two-stage retrieval pipeline."""
     
     def __init__(self):
         """Initialize the enhanced retriever."""
@@ -26,7 +26,6 @@ class RAGRetriever:
         container_id: str, 
         question: str, 
         k: int = 8,
-        use_fast_index: bool = False,
         use_reranking: bool = True,
         log_level: Optional[str] = None
     ) -> List[Dict[str, Any]]:
@@ -44,11 +43,9 @@ class RAGRetriever:
         Returns:
             List of relevant documents with text and metadata
         """
-        logger.info(f"🔍 Starting enhanced RAG retrieval for container: {container_id}")
+        logger.info(f"🔍 Starting RAG retrieval for container: {container_id}")
         logger.info(f"❓ Question: {question}")
-        logger.info(f"📊 Using {'fast' if use_fast_index else 'main'} collection")
-        logger.info(f"🔄 Reranking enabled: {use_reranking}")
-        
+                
         try:
             # Stage 1: Generate embedding for the question
             logger.info("🧠 Stage 1: Generating embedding for the question...")
@@ -65,7 +62,6 @@ class RAGRetriever:
                 query_embedding=question_embedding,
                 container_id=container_id,
                 k=initial_k,
-                use_fast_index=use_fast_index,
                 log_level=log_level
             )
             
@@ -136,44 +132,44 @@ class RAGRetriever:
             # Fallback to original documents
             return documents[:k]
     
-    async def retrieve_errors(
-        self, 
-        container_id: str, 
-        question: str, 
-        k: int = 8
-    ) -> List[Dict[str, Any]]:
-        """
-        Retrieve error-specific context from error collection.
+    # async def retrieve_errors(
+    #     self, 
+    #     container_id: str, 
+    #     question: str, 
+    #     k: int = 8
+    # ) -> List[Dict[str, Any]]:
+    #     """
+    #     Retrieve error-specific context from error collection.
         
-        Args:
-            container_id: Container ID to search within
-            question: User question
-            k: Number of results to return
+    #     Args:
+    #         container_id: Container ID to search within
+    #         question: User question
+    #         k: Number of results to return
             
-        Returns:
-            List of error documents with metadata
-        """
-        logger.info(f"🔍 Retrieving error context for container: {container_id}")
-        logger.info(f"❓ Question: {question}")
+    #     Returns:
+    #         List of error documents with metadata
+    #     """
+    #     logger.info(f"🔍 Retrieving error context for container: {container_id}")
+    #     logger.info(f"❓ Question: {question}")
         
-        try:
-            # Generate embedding for the question
-            question_embeddings = await llm_client.embed_texts([question])
-            question_embedding = question_embeddings[0]
+    #     try:
+    #         # Generate embedding for the question
+    #         question_embeddings = await llm_client.embed_texts([question])
+    #         question_embedding = question_embeddings[0]
             
-            # Query error collection
-            error_docs = await vector_store.query_errors(
-                query_embedding=question_embedding,
-                container_id=container_id,
-                k=k
-            )
+    #         # Query error collection
+    #         error_docs = await vector_store.query_errors(
+    #             query_embedding=question_embedding,
+    #             container_id=container_id,
+    #             k=k
+    #         )
             
-            logger.info(f"📚 Found {len(error_docs)} error documents")
-            return error_docs
+    #         logger.info(f"📚 Found {len(error_docs)} error documents")
+    #         return error_docs
             
-        except Exception as e:
-            logger.error(f"❌ Failed to retrieve error context: {str(e)}")
-            raise Exception(f"Failed to retrieve error context: {str(e)}")
+    #     except Exception as e:
+    #         logger.error(f"❌ Failed to retrieve error context: {str(e)}")
+    #         raise Exception(f"Failed to retrieve error context: {str(e)}")
     
     def build_prompt(self, docs: List[Dict[str, Any]], question: str) -> str:
         """
@@ -186,7 +182,7 @@ class RAGRetriever:
         Returns:
             Formatted prompt for LLM
         """
-        logger.info(f"🔨 Building enhanced prompt from {len(docs)} documents")
+        logger.info(f"🔨 Building prompt from {len(docs)} documents")
         
         context_parts = []
         for i, doc in enumerate(docs, 1):
@@ -220,7 +216,7 @@ Instructions:
 4. If the information is not in the logs, say so clearly
 5. Be concise but thorough in your analysis
 6. Consider log levels (error, warn, info, debug) when analyzing severity
-7. Be brief and to the point.
+7. Be concise and to the point.
 8. Take conversation gradually understand what the user wants and provide the insights from the logs.
 
 Answer for the question according to the context provided:"""
@@ -296,6 +292,4 @@ Answer for the question according to the context provided:"""
             logger.error(f"❌ Failed to get retrieval stats: {str(e)}")
             return {"error": str(e)}
 
-
-# Global enhanced retriever instance
-rag_retriever =     RAGRetriever() 
+rag_retriever = RAGRetriever()

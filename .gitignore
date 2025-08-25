@@ -23,7 +23,7 @@ backend/venv/
 backend/env/
 *.egg-info/
 .pytest_cache/
-
+test.ipynb
 # IDE and editor files
 .vscode/
 .idea/

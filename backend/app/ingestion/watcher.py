@@ -1,5 +1,5 @@
 """
-Enhanced Docker watcher to monitor container events and manage enhanced log streamers.
+Docker watcher to monitor container events and manage log streamers.
 Reference: https://docker-py.readthedocs.io/en/stable/containers.html
 """
 import asyncio
@@ -7,20 +7,20 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import docker
-from app.ingestion.streamer import EnhancedLogStreamer
+from app.ingestion.streamer import LogStreamer
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
 class DockerWatcher:
-    """Enhanced Docker watcher with better monitoring and management."""
-    
+    """Docker watcher with better monitoring and management."""
+        
     def __init__(self):
-        """Initialize enhanced Docker watcher."""
+        """Initialize Docker watcher."""
         self.client = docker.from_env()
         self.running = False
-        self.streamers: Dict[str, EnhancedLogStreamer] = {}
+        self.streamers: Dict[str, LogStreamer] = {}
         self.stream_tasks: Dict[str, asyncio.Task] = {}
         self.event_task: Optional[asyncio.Task] = None
         
@@ -34,24 +34,23 @@ class DockerWatcher:
             "watcher_start_time": None
         }
 
+
+
     async def start(self):
-        """Start enhanced watching of Docker events and existing containers."""
+        """Start watching of Docker events and existing containers."""
         self.running = True
         self.stats["watcher_start_time"] = asyncio.get_event_loop().time()
-        
-        logger.info("🚀 Starting enhanced Docker watcher...")
-        
+        logger.info("🚀 Starting Docker watcher...")
         # Initialize streamers for containers already running
         await self._initialize_running_containers()
-        
         # Launch event monitor as an async task
         self.event_task = asyncio.create_task(self._monitor_events())
-        
-        logger.info("✅ Enhanced Docker watcher started successfully")
+        logger.info("✅ Docker watcher started successfully")
+
 
     async def stop(self):
         """Stop watching Docker events and all streamers."""
-        logger.info("🛑 Stopping enhanced Docker watcher...")
+        logger.info("🛑 Stopping Docker watcher...")
         self.running = False
         
         # Cancel event monitor
@@ -77,15 +76,19 @@ class DockerWatcher:
                     pass
             del self.streamers[container_id]
 
-        logger.info("✅ Enhanced Docker watcher stopped")
+        logger.info("✅ Docker watcher stopped")
+
+
 
     async def _monitor_events(self):
-        """Enhanced monitoring of Docker events in a background thread."""
+        """Monitoring of Docker events in a background thread."""
         try:
             # Run the blocking Docker events in a thread
             await asyncio.to_thread(self._run_event_monitor)
         except Exception as e:
-            logger.error(f"❌ Error in enhanced event monitor: {str(e)}")
+            logger.error(f"❌ Error in event monitor: {str(e)}")
+
+
 
     def _run_event_monitor(self):
         """Run the blocking Docker events monitor in a thread."""
@@ -105,8 +108,10 @@ class DockerWatcher:
         except Exception as e:
             logger.error(f"❌ Error monitoring Docker events: {str(e)}")
 
+
+
     async def _handle_container_event(self, event: Dict):
-        """Enhanced handling of container start/stop events."""
+        """Handling of container start/stop events."""
         if not self.running:
             return
             
@@ -133,12 +138,14 @@ class DockerWatcher:
             logger.error(f"❌ Error handling container event: {str(e)}")
             self.stats["error_events"] += 1
 
+
+
     async def _initialize_running_containers(self):
         """Initialize streamers for currently running containers."""
         try:
             logger.info("🔍 Initializing streamers for running containers...")
             
-            # Run the blocking Docker operation in a thread
+            # Get all running containers.
             containers = await asyncio.to_thread(self.client.containers.list)
             
             logger.info(f"📊 Found {len(containers)} running containers")
@@ -151,8 +158,10 @@ class DockerWatcher:
         except Exception as e:
             logger.error(f"❌ Error initializing running containers: {str(e)}")
 
+
+
     async def _start_container_streamer(self, container_id: str):
-        """Start an enhanced log streamer for a container."""
+        """Start log streamer for a container."""
         if container_id in self.streamers:
             logger.info(f"ℹ️  Streamer already exists for container: {container_id}")
             return  # Already streaming
@@ -160,13 +169,12 @@ class DockerWatcher:
         try:
             # Check if container is running (run in thread)
             container = await asyncio.to_thread(self.client.containers.get, container_id)
-            
             if container.status != 'running':
                 logger.info(f"ℹ️  Container {container_id} is not running (status: {container.status})")
                 return
             
-            # Create and start enhanced streamer
-            streamer = EnhancedLogStreamer(container_id)
+            # Create and start streamer
+            streamer = LogStreamer(container_id)
             self.streamers[container_id] = streamer
             
             # Start streaming in background task
@@ -180,10 +188,12 @@ class DockerWatcher:
             
             self.stats["containers_monitored"] += 1
             
-            logger.info(f"✅ Started enhanced log streaming for container: {container.name} ({container_id})")
+            logger.info(f"✅ Started log streaming for container: {container.name} ({container_id})")
             
         except Exception as e:
             logger.error(f"❌ Error starting streamer for container {container_id}: {str(e)}")
+
+
 
     def _handle_streamer_error(self, container_id: str, task: asyncio.Task):
         """Handle streamer task errors."""
@@ -195,8 +205,10 @@ class DockerWatcher:
             if container_id in self.stream_tasks:
                 del self.stream_tasks[container_id]
 
+
+
     async def _stop_container_streamer(self, container_id: str):
-        """Stop an enhanced log streamer for a container."""
+        """Stop log streamer for a container."""
         try:
             streamer = self.streamers.get(container_id)
             if not streamer:
@@ -221,10 +233,12 @@ class DockerWatcher:
             
             self.stats["containers_monitored"] = max(0, self.stats["containers_monitored"] - 1)
             
-            logger.info(f"✅ Stopped enhanced log streaming for container: {container_id}")
+            logger.info(f"✅ Stopped log streaming for container: {container_id}")
             
         except Exception as e:
             logger.error(f"❌ Error stopping streamer for container {container_id}: {str(e)}")
+
+
 
     async def get_active_streamers(self) -> Dict[str, Dict[str, Any]]:
         """Get detailed information about active streamers."""
@@ -255,6 +269,8 @@ class DockerWatcher:
                 
         return active
     
+    
+    
     def get_watcher_stats(self) -> Dict[str, Any]:
         """Get comprehensive watcher statistics."""
         runtime = 0
@@ -267,7 +283,9 @@ class DockerWatcher:
             "runtime_seconds": runtime,
             "stats": self.stats.copy()
         }
-    
+
+
+
     async def get_all_container_info(self) -> List[Dict[str, Any]]:
         """Get information about all containers (running and stopped)."""
         try:
@@ -291,7 +309,9 @@ class DockerWatcher:
         except Exception as e:
             logger.error(f"❌ Error getting container info: {str(e)}")
             return []
-    
+
+
+
     async def restart_streamer(self, container_id: str) -> bool:
         """Restart streamer for a specific container."""
         try:
@@ -311,5 +331,5 @@ class DockerWatcher:
             return False
 
 
-# Global enhanced watcher instance
-docker_watcher = DockerWatcher() 
+# Global Watcher instance
+docker_watcher = DockerWatcher()

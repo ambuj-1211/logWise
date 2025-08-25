@@ -1,17 +1,17 @@
 """
-Enhanced LLM client supporting Google Gemini for chat and Voyage AI for embeddings and reranking.
+Enhanced LLM client supporting Google OPENAI for chat and Voyage AI for embeddings and reranking.
 """
 import asyncio
 import logging
 import os
 from typing import Any, Dict, List, Optional
 
+import openai
 import voyageai
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Load environment variables
 load_dotenv()
 
 # Set up logging
@@ -19,42 +19,42 @@ logger = logging.getLogger(__name__)
 
 
 class LLMClient:
-    """Enhanced LLM client with Gemini for chat and Voyage AI for embeddings/reranking."""
+    """Enhanced LLM client with OPENAI for chat and Voyage AI for embeddings/reranking."""
     
     def __init__(self):
-        """Initialize both Gemini and Voyage AI clients."""
-        logger.info("🤖 Initializing Enhanced LLM Client...")
-        
-        # Initialize Gemini for chat
-        self._init_gemini()
-        
+        """Initialize both OPENAI and Voyage AI clients."""
+        # Initialize OPENAI for chat
+        self._init_openai()
         # Initialize Voyage AI for embeddings and reranking
         self._init_voyage()
-        
-        logger.info("✅ Enhanced LLM Client initialized successfully")
+        logger.info("LLM client initialized.")
     
-    def _init_gemini(self):
-        """Initialize Google Gemini client for chat completions."""
-        logger.info("🔑 Initializing Gemini client...")
+    def _init_openai(self):
+        """Initialize OPENAI client for chat completions."""
+        logger.info("🔑 Initializing openai client...")
         
         # Get API key from environment
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            logger.warning("⚠️  GEMINI_API_KEY not found - Gemini chat will be disabled")
-            self.gemini_available = False
+            logger.warning("⚠️ OPENAI_API_KEY not found")
+            self.openai_available = False
             return
         
         try:
-            # Configure Gemini
-            client = genai.Client(api_key)
+            # Configure OPENAI
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             # Initialize models
-            self.client = client
-            self.completion_model = "gemini-2.5-flash"
-            self.gemini_available = True
+            self.openai_client = client
+            # self.completion_model = "gemini-2.5-flash"
+            # self.gemini_available = True
+            self.completion_model = "gpt-4.1-nano"
+            self.openai_available = True
+            
+            
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Gemini: {str(e)}")
-            self.gemini_available = False
+            logger.error(f"Failed to initialize openai: {str(e)}")
+            self.openai_available = False
     
     def _init_voyage(self):
         """Initialize Voyage AI client for embeddings and reranking."""
@@ -70,17 +70,15 @@ class LLMClient:
             self.voyage_client = voyageai.Client(api_key=api_key)
             
             # Set default embedding model
-            self.embedding_model = "voyage-3"  # Best for general purpose
-            self.rerank_model = "rerank-2.5"  # Best for reranking
+            self.embedding_model = "voyage-3"
+            self.rerank_model = "rerank-2.5"
             
             logger.info("✅ Voyage AI client initialized successfully")
-            logger.info(f"🧠 Embedding model: {self.embedding_model}")
-            logger.info(f"🔄 Rerank model: {self.rerank_model}")
             
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Voyage AI: {str(e)}")
             raise Exception(f"Failed to initialize Voyage AI: {str(e)}")
-    
+
+
     async def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """
         Generate embeddings for a list of texts using Voyage AI.
@@ -91,7 +89,6 @@ class LLMClient:
         Returns:
             List of embedding vectors
         """
-        logger.info(f"🧠 Generating embeddings for {len(texts)} texts using Voyage AI")
         
         try:
             # Use Voyage AI for embeddings
@@ -140,7 +137,7 @@ class LLMClient:
             
             # Format results
             results = []
-            for result in rerank_results:
+            for result in rerank_results.results:
                 results.append({
                     "text": result.document,
                     "score": result.relevance_score,
@@ -148,6 +145,8 @@ class LLMClient:
                 })
             
             logger.info(f"✅ Reranking completed - Top score: {results[0]['score']:.4f}")
+            # total_tokens is the parameter in the rerank_results to get the total tokens of the string
+            logger.info(f"Total tokens are {rerank_results.total_tokens}")
             return results
             
         except Exception as e:
@@ -155,7 +154,7 @@ class LLMClient:
     
     async def generate_answer(self, prompt: str, max_tokens: int = 1000) -> str:
         """
-        Generate completion using Gemini.
+        Generate completion using OPENAI.
         
         Args:
             prompt: The input prompt
@@ -164,8 +163,8 @@ class LLMClient:
         Returns:
             Generated text response
         """
-        if not self.gemini_available:
-            raise Exception("Gemini is not available - check GEMINI_API_KEY")
+        if not self.openai_available:
+            raise Exception("OPENAI is not available - check OPENAI_API_KEY")
         
         logger.info(f"🤖 Generating completion with prompt length: {len(prompt)}")
         logger.info(f"📝 Prompt preview: {prompt[:200]}{'...' if len(prompt) > 200 else ''}")
@@ -173,15 +172,31 @@ class LLMClient:
         try:
             
             # Generate completion
-            response = self.client.models.generate_content(
-                model=self.completion_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=max_tokens
-                )
+            # response = self.gemini_client.models.generate_content(
+            #     model=self.completion_model,
+            #     contents=prompt,
+            #     config=types.GenerateContentConfig(
+            #         temperature=0.1,
+            #         max_output_tokens=max_tokens
+            #     )
+            # )
+            # Generate Completion
+            response = self.openai_client.chat.completions.create(
+            model=self.completion_model,
+            # messages=[
+            #     {"role": "system", "content": "You are an expert at extracting numerical requirements from job postings. Always return only the number as a float or 'null' if not specified."},
+            #     {"role": "user", "content": prompt}
+            # ],
+            messages = [
+                {"role": "system", "content": "Your task is to create a short answer according to the prompt given to you, Give Concise Answers."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=max_tokens,
+            temperature=0.3
             )
-            answer = response.text
+            
+        
+            answer = response.choices[0].message.content
             
             logger.info(f"✅ Completion generated successfully!")
             logger.info(f"💬 Response length: {len(answer)} characters")
@@ -194,13 +209,13 @@ class LLMClient:
             raise Exception(f"Failed to generate completion: {str(e)}")
     
     async def test_connections(self) -> Dict[str, bool]:
-        """Test both Gemini and Voyage AI connections."""
+        """Test both OPENAI and Voyage AI connections."""
         logger.info("🧪 Testing LLM connections...")
         
         results = {
             "voyage_embeddings": False,
             "voyage_reranking": False,
-            "gemini_chat": False
+            "openai_chat": False
         }
         
         try:
@@ -218,13 +233,13 @@ class LLMClient:
                 results["voyage_reranking"] = True
                 logger.info("✅ Voyage AI reranking test passed")
             
-            # Test Gemini chat
-            if self.gemini_available:
-                test_prompt = "Say 'Hello, Gemini is working!'"
+            # Test openai chat
+            if self.openai_available:
+                test_prompt = "Say 'Hello, openai is working!'"
                 response = await self.generate_answer(test_prompt, max_tokens=50)
                 if response:
-                    results["gemini_chat"] = True
-                    logger.info("✅ Gemini chat test passed")
+                    results["openai_chat"] = True
+                    logger.info("✅ OPENAI chat test passed")
             
             logger.info(f"📊 Connection test results: {results}")
             return results

@@ -1,5 +1,5 @@
 """
-Enhanced log streamer for tailing Docker logs with intelligent chunking and continuous streaming.
+Log streamer for tailing Docker logs with intelligent chunking and continuous streaming.
 """
 import asyncio
 # Set up logging
@@ -18,11 +18,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 logger = logging.getLogger(__name__)
 
 
-class EnhancedLogStreamer:
-    """Enhanced log streamer with intelligent chunking and continuous streaming."""
+class LogStreamer:
+    """Log streamer with intelligent chunking and continuous streaming."""
     
     def __init__(self, container_id: str):
-        """Initialize enhanced log streamer for a container."""
+        """Initialize log streamer for a container."""
         self.container_id = container_id
         self.client = docker.from_env()
         self.container = self.client.containers.get(container_id)
@@ -67,12 +67,11 @@ class EnhancedLogStreamer:
         }
         
     async def start_streaming(self):
-        """Start enhanced continuous streaming from the container."""
+        """Start continuous streaming from the container."""
         self.running = True
         self.stream_start_time = time.time()
         
-        logger.info(f"📝 Starting enhanced log streaming for container: {self.container_id}")
-        logger.info(f"🐳 Container name: {self.container.name}")
+        logger.info(f"📝 Starting log streaming for container: {self.container_id}")
         logger.info(f"📊 Chunk config: {self.chunk_config}")
         
         try:
@@ -96,12 +95,10 @@ class EnhancedLogStreamer:
         finally:
             self.running = False
             await self._finalize_streaming()
-            logger.info(f"🛑 Stopped enhanced log streaming for container: {self.container_id}")
     
     async def _stream_logs(self):
-        """Enhanced continuous log streaming with better error handling."""
+        """Cntinuous log streaming with better error handling."""
         try:
-            # Get logs with timestamps and follow
             logs = self.container.logs(
                 stream=True,
                 timestamps=True,
@@ -123,7 +120,7 @@ class EnhancedLogStreamer:
                         self.stats["total_lines_processed"] += 1
                         
                 except UnicodeDecodeError as e:
-                    logger.warning(f"⚠️  Unicode decode error for container {self.container_id}: {str(e)}")
+                    logger.warning(f"⚠️ Unicode decode error for container {self.container_id}: {str(e)}")
                     continue
                 except Exception as e:
                     logger.error(f"❌ Error processing log line for container {self.container_id}: {str(e)}")
@@ -164,7 +161,7 @@ class EnhancedLogStreamer:
             self.stats["processing_errors"] += 1
     
     def should_chunk(self) -> bool:
-        """Enhanced chunking decision logic."""
+        """Chunking decision logic."""
         if not self.buffer:
             return False
             
@@ -185,7 +182,7 @@ class EnhancedLogStreamer:
         return False
     
     def detect_log_level(self, text: str) -> str:
-        """Enhanced log level detection with confidence scoring."""
+        """Log level detection with confidence scoring."""
         text_lower = text.lower()
         
         # Count pattern matches
@@ -245,7 +242,7 @@ class EnhancedLogStreamer:
             }
     
     async def chunk_and_store(self):
-        """Enhanced chunking and storage with better error handling."""
+        """Chunking and storage with better error handling."""
         if not self.buffer:
             return
             
@@ -345,7 +342,7 @@ class EnhancedLogStreamer:
         duration = time.time() - self.stream_start_time if self.stream_start_time else 0
         
         logger.info(f"📊 Streaming statistics for container {self.container_id}:")
-        logger.info(f"   ⏱️  Duration: {duration:.2f} seconds")
+        logger.info(f"   ⏱️ Duration: {duration:.2f} seconds")
         logger.info(f"   📝 Lines processed: {self.stats['total_lines_processed']}")
         logger.info(f"   📄 Chunks created: {self.stats['total_chunks_created']}")
         logger.info(f"   🧠 Embeddings generated: {self.stats['total_embeddings_generated']}")

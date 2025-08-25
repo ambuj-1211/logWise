@@ -2,7 +2,7 @@ export interface Container {
   id: string;
   name: string;
   image: string;
-  status: 'running' | 'stopped' | 'paused';
+  status: 'running' | 'exited' | 'paused';
   created: string;
   ports?: string[];
 }

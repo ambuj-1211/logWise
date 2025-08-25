@@ -9,11 +9,9 @@ from app.rag.retriever import rag_retriever
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-# Set up logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
 
 class QueryRequest(BaseModel):
     """Query request model."""
@@ -49,7 +47,7 @@ async def query_logs(request: QueryRequest) -> QueryResponse:
     
     try:
         # Step 1: Retrieve relevant context
-        logger.info("🔍 Step 1: Retrieving relevant context...")
+        logger.info("Step 1: Retrieving relevant context...")
         docs = await rag_retriever.retrieve_context(
             container_id=request.container_id,
             question=request.question,
@@ -59,7 +57,7 @@ async def query_logs(request: QueryRequest) -> QueryResponse:
         if not docs:
             logger.warning("⚠️  No relevant documents found")
             return QueryResponse(
-                answer="No relevant log data found for this question. The container might not have any logs or the question doesn't match the available log content.",
+                answer="No relevant log data found for this question or the query is not aligned to the current log content.",
                 references=[],
                 container_id=request.container_id,
                 question=request.question
@@ -80,8 +78,6 @@ async def query_logs(request: QueryRequest) -> QueryResponse:
         references = rag_retriever.extract_references(docs)
         
         logger.info("✅ RAG query completed successfully")
-        logger.info(f"📝 Answer length: {len(answer)} characters")
-        logger.info(f"📄 Number of references: {len(references)}")
         
         return QueryResponse(
             answer=answer,
@@ -91,8 +87,7 @@ async def query_logs(request: QueryRequest) -> QueryResponse:
         )
         
     except Exception as e:
-        logger.error(f"❌ RAG query failed: {str(e)}")
-        logger.error(f"🔍 Error type: {type(e).__name__}")
+        logger.error(f"❌ Query endpoint failed: {str(e)}")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to process query: {str(e)}"

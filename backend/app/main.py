@@ -3,46 +3,49 @@ Main FastAPI application for logWise Docker extension backend.
 Handles container log ingestion, vector storage, and RAG querying.
 """
 import asyncio
+import logging
 from contextlib import asynccontextmanager
+from math import log
 
 from app.api import containers, logs, query
 from app.ingestion.watcher import DockerWatcher
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    print("🚀 Starting logWise Backend...")
+    logger.info("🚀 Starting logWise Backend...")
     app.state.docker_watcher = DockerWatcher()
     
     try:
         # Start the Docker watcher
         await app.state.docker_watcher.start()
-        print("✅ Docker watcher started successfully")
+        logger.info("✅ Docker watcher started successfully")
     except Exception as e:
-        print(f"❌ Failed to start Docker watcher: {str(e)}")
+        logger.error(f"❌ Failed to start Docker watcher: {str(e)}")
         # Continue anyway - the app can still work without the watcher
     
     yield
     
     # Shutdown
-    print("🛑 Shutting down logWise Backend...")
+    logger.info("🛑 Shutting down logWise Backend...")
     if hasattr(app.state, 'docker_watcher'):
         try:
             await app.state.docker_watcher.stop()
-            print("✅ Docker watcher stopped successfully")
+            logger.info("✅ Docker watcher stopped successfully")
         except Exception as e:
-            print(f"❌ Error stopping Docker watcher: {str(e)}")
+            logger.error(f"❌ Error stopping Docker watcher: {str(e)}")
 
 
 app = FastAPI(
     title="logWise Backend",
-    description="Docker container log analysis with RAG capabilities",
+    description="Docker Container Log Analysis.",
     version="0.0.1",
-    lifespan=lifespan
+    # lifespan=lifespan
 )
 
 # CORS middleware
@@ -56,7 +59,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(containers.router, tags=["containers"])
-app.include_router(logs.router, tags=["logs"])
+# app.include_router(logs.router, tags=["logs"])
 app.include_router(query.router, tags=["query"])
 
 @app.get("/")
@@ -77,7 +80,7 @@ async def health_check():
         "endpoints": {
             "docs": "/docs",
             "containers": "/api/containers",
-            "logs": "/api/logs",
+            # "logs": "/api/logs",
             "query": "/api/logs/query"
         }
     } 

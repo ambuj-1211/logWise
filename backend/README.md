@@ -1,190 +1,283 @@
-# logWise Backend
+# Dockerative Extension Backend
 
-A FastAPI-based backend for Docker container log analysis with RAG (Retrieval-Augmented Generation) capabilities using Gemini via LiteLLM.
+A comprehensive Docker log analysis system with real-time monitoring, vector database storage, and RAG-powered querying capabilities.
 
-## Features
+## 🚀 System Overview
 
-- **Real-time Log Ingestion**: Automatically streams and processes Docker container logs
-- **Vector Storage**: Uses ChromaDB for efficient log chunk storage and retrieval
-- **RAG-powered Queries**: Ask natural language questions about container logs
-- **WebSocket Streaming**: Real-time log streaming via WebSocket
-- **RESTful API**: Complete REST API for container management and log analysis
+This backend system provides a complete pipeline for Docker container monitoring, log analysis, and intelligent querying using advanced AI techniques.
 
-## Architecture
+## 🏗️ Architecture & Flow
 
+### 1. Docker Container Monitoring Service
+**Purpose**: Watch the system to get information about running Docker containers and store logs in the database.
+
+**Components**:
+- **DockerWatcher** (`app/ingestion/watcher.py`): Monitors Docker events and manages container lifecycle
+- **EnhancedLogStreamer** (`app/ingestion/streamer.py`): Streams and processes container logs in real-time
+
+**Process Flow**:
 ```
-app/
-├── main.py              # FastAPI application entry point
-├── api/                 # API routes
-│   ├── containers.py    # Container management endpoints
-│   ├── logs.py         # Log streaming and retrieval
-│   └── query.py        # RAG query endpoints
-├── ingestion/          # Log ingestion pipeline
-│   ├── watcher.py      # Docker event monitoring
-│   └── streamer.py     # Log streaming and processing
-├── rag/               # RAG components
-│   ├── llm_client.py  # LiteLLM client for Gemini
-│   └── retriever.py   # Vector search and retrieval
-└── storage/           # Data storage
-    └── vector_store.py # ChromaDB integration
+Docker Events → DockerWatcher → LogStreamer → Log Processing → Database Storage
+     ↓              ↓              ↓              ↓              ↓
+Container    Event Detection   Log Streaming   Chunking &     ChromaDB
+Lifecycle    & Management      & Buffering     Embedding      Storage
 ```
 
-## Quick Start
+**Key Features**:
+- Real-time Docker event monitoring
+- Automatic container lifecycle management
+- Intelligent log chunking with overlap
+- Log level detection and severity scoring
+- Performance tracking and statistics
 
-### 1. Environment Setup
+### 2. Vector Database Creation & Storage
+**Purpose**: Create and store processed log data in a vector database for efficient retrieval.
 
-Create a `.env` file in the backend directory:
+**Components**:
+- **VectorStore** (`app/storage/vector_store.py`): ChromaDB integration with multiple collections
+- **ChromaDB**: Vector database with three specialized collections
 
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
+**Collections**:
+1. **Main Collection** (`docker_logs_main`): Flat indexing for exact similarity
+2. **Fast Collection** (`docker_logs_fast`): ANN indexing for approximate search
+3. **Error Collection** (`docker_logs_errors`): Specialized error analysis
+
+**Storage Process**:
+```
+Log Chunks → Embedding Generation → Vector Storage → Metadata Indexing
+     ↓              ↓                    ↓              ↓
+Text Content   AI Embeddings      ChromaDB Vectors   Search Indexes
 ```
 
-### 2. Install Dependencies
+### 3. Query Endpoint Service
+**Purpose**: Expose API endpoints to receive queries from clients.
 
+**Components**:
+- **FastAPI Application** (`app/main.py`): Main web server
+- **API Routes** (`app/api/`): RESTful endpoints for client interaction
+
+**Available Endpoints**:
+```
+GET  /                    - Health check
+GET  /health             - Detailed health status
+GET  /api/containers     - List all containers
+GET  /api/containers/{id} - Get container details
+POST /api/logs/query     - RAG-powered log querying
+GET  /api/logs/stats     - Log statistics
+GET  /api/logs/query/suggestions - Query suggestions
+```
+
+### 4. RAG Query Processing Service
+**Purpose**: Process client queries, embed them, perform similarity search, and generate responses.
+
+**Components**:
+- **RAGRetriever** (`app/rag/retriever.py`): Two-stage retrieval pipeline
+- **LLMClient** (`app/rag/llm_client.py`): AI model integration (Voyage AI + Gemini)
+
+**Query Processing Flow**:
+```
+User Query → Query Embedding → Vector Search → Reranking → Context Building → LLM Generation → Response
+     ↓              ↓              ↓              ↓              ↓              ↓              ↓
+Natural      Vector      Similar        Relevance    Prompt        AI Model      Generated
+Language    Embedding   Documents      Ranking      Context       Processing    Answer
+```
+
+**Two-Stage Pipeline**:
+1. **Vector Similarity Search**: Find relevant log chunks using embeddings
+2. **Reranking**: Use Voyage AI to rank results by relevance
+3. **Context Building**: Create comprehensive prompt with retrieved context
+4. **Answer Generation**: Generate natural language response using AI
+
+### 5. Frontend Integration
+**Purpose**: Provide seamless integration with the frontend application.
+
+**Integration Points**:
+- **RESTful APIs**: Standard HTTP endpoints for all operations
+- **CORS Support**: Cross-origin resource sharing enabled
+- **Error Handling**: Comprehensive error responses
+- **Real-time Updates**: WebSocket support for live data
+
+**Frontend API Usage**:
+```typescript
+// Get containers
+const containers = await fetch('/api/containers').then(r => r.json());
+
+// Query logs with RAG
+const response = await fetch('/api/logs/query', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    container_id: 'container_id',
+    question: 'What errors occurred?',
+    k: 8
+  })
+});
+```
+
+## 🔧 Setup & Installation
+
+### Prerequisites
+- Python 3.8+
+- Docker daemon running
+- API keys for AI services
+
+### Environment Configuration
 ```bash
+# Required API Keys
+export VOYAGE_API_KEY="your_voyage_api_key"
+export GEMINI_API_KEY="your_gemini_api_key"  # Optional
+
+# Optional Configuration
+export CHROMA_PERSIST_DIR="./chroma_db"
+export LOG_BUFFER_SIZE=300
+export MAX_QUERY_RESULTS=8
+```
+
+### Installation
+```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Run the Application
+# Run the application
+python run.py
 
-```bash
-# Development
+# Or with uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Production
-uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 4. Using Docker
-
+### Docker Deployment
 ```bash
-# Build and run
+# Build and run with Docker
+docker build -t dockerative-backend .
+docker run -p 8000:8000 --env-file .env dockerative-backend
+
+# Or with docker-compose
 docker-compose up --build
-
-# Or build manually
-docker build -t logwise-backend .
-docker run -p 8000:8000 --env-file .env logwise-backend
 ```
 
-## API Endpoints
+## 📊 Key Features
 
-### Health Check
-- `GET /` - Basic health check
-- `GET /health` - Detailed health status
+### Real-time Log Monitoring
+- Automatic container event detection
+- Continuous log streaming and processing
+- Intelligent chunking with context preservation
+- Performance monitoring and statistics
 
-### Containers
-- `GET /api/containers` - List all containers
-- `GET /api/containers/{container_id}` - Get container details
+### Advanced Vector Search
+- Multiple indexing strategies (Flat, ANN)
+- Specialized error collection
+- Container-specific filtering
+- Metadata-based search capabilities
 
-### Logs
-- `GET /api/logs/raw` - Get raw logs with optional filtering
-- `GET /api/logs/stats` - Get log statistics
-- `WS /api/logs/stream` - WebSocket for real-time log streaming
+### RAG-powered Querying
+- Two-stage retrieval pipeline
+- Voyage AI embeddings and reranking
+- Context-aware answer generation
+- Query suggestions and statistics
 
-### RAG Queries
-- `POST /api/logs/query` - Query logs using natural language
-- `GET /api/logs/query/suggestions` - Get suggested questions
-- `GET /api/logs/query/stats` - Get query statistics
+### Comprehensive API
+- RESTful endpoints for all operations
+- WebSocket support for real-time updates
+- CORS-enabled for frontend integration
+- Comprehensive error handling
 
-## Example Usage
+## 🧪 Testing & Validation
 
-### List Containers
+### API Testing
 ```bash
+# Run the test suite
+python test_api.py
+
+# Test specific endpoints
+curl http://localhost:8000/health
 curl http://localhost:8000/api/containers
 ```
 
-### Query Logs
-```bash
-curl -X POST http://localhost:8000/api/logs/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "container_id": "your_container_id",
-    "question": "What errors occurred in the logs?",
-    "k": 8
-  }'
+### Example Usage
+```python
+# Start the system
+from app.ingestion.watcher import docker_watcher
+await docker_watcher.start()
+
+# Query logs
+from app.rag.retriever import rag_retriever
+results = await rag_retriever.retrieve_context(
+    container_id="my_container",
+    question="What errors occurred?",
+    k=8
+)
 ```
 
-### Get Raw Logs
-```bash
-curl "http://localhost:8000/api/logs/raw?container_id=your_container_id&tail=100"
+## 🔍 Configuration Options
+
+### Log Processing
+```python
+chunk_config = {
+    "max_chunk_size": 1500,    # Maximum characters
+    "min_chunk_size": 200,     # Minimum characters
+    "max_lines": 25,           # Maximum lines
+    "timeout_seconds": 30,     # Timeout for chunking
+    "overlap_chars": 200       # Character overlap
+}
 ```
 
-## Testing
-
-Run the smoke tests:
-
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio
-
-# Run tests
-pytest tests/
-
-# Run example usage
-python example_usage.py
+### RAG Pipeline
+```python
+retriever_config = {
+    "use_reranking": True,
+    "initial_k": 20,           # Candidates for reranking
+    "final_k": 8               # Final results
+}
 ```
 
-## Configuration
+### Vector Store
+```python
+collections = {
+    "main": "flat",      # Exact similarity
+    "fast": "ann",       # Approximate search
+    "error": "flat"      # Error analysis
+}
+```
 
-### Environment Variables
+## 📈 Performance & Monitoring
 
-- `GEMINI_API_KEY`: Required. Your Gemini API key
-- `CHROMA_PERSIST_DIR`: Optional. ChromaDB persistence directory (default: `./chroma_db`)
-- `LOG_BUFFER_SIZE`: Optional. Log chunk size in characters (default: 300)
-- `MAX_QUERY_RESULTS`: Optional. Maximum results for queries (default: 8)
+### System Statistics
+- Container monitoring statistics
+- Log processing metrics
+- Query performance tracking
+- Error rates and recovery
 
-### LiteLLM Models
+### Optimization Features
+- Asynchronous processing
+- Batch embedding generation
+- Intelligent caching
+- Resource usage monitoring
 
-The backend uses LiteLLM for model access:
-
-- **Completions**: `gemini/ultra`
-- **Embeddings**: `gemini/embeddings`
-
-## Development
-
-### Project Structure
-
-- **FastAPI**: Modern async web framework
-- **ChromaDB**: Vector database for log storage
-- **LiteLLM**: Unified LLM interface
-- **Docker SDK**: Container management
-- **WebSocket**: Real-time communication
-
-### Key Components
-
-1. **DockerWatcher**: Monitors container events and manages log streamers
-2. **LogStreamer**: Streams, chunks, and embeds container logs
-3. **RAGRetriever**: Handles vector search and context retrieval
-4. **VectorStore**: ChromaDB wrapper for log storage
-
-### Adding New Features
-
-1. **New API Routes**: Add to `app/api/`
-2. **New Models**: Add to appropriate module with Pydantic
-3. **New Services**: Add to appropriate package
-4. **Tests**: Add to `tests/` directory
-
-## Troubleshooting
+## 🚨 Troubleshooting
 
 ### Common Issues
-
 1. **Docker Connection**: Ensure Docker daemon is running
-2. **API Key**: Verify `GEMINI_API_KEY` is set correctly
+2. **API Keys**: Verify Voyage AI and Gemini API keys are set
 3. **Port Conflicts**: Check if port 8000 is available
 4. **Permissions**: Ensure Docker socket access
 
-### Logs
-
-Check application logs for detailed error information:
-
+### Debug Mode
 ```bash
-# Docker logs
-docker-compose logs backend
-
-# Direct logs
+# Run with debug logging
 uvicorn app.main:app --log-level debug
+
+# Check system status
+curl http://localhost:8000/health
 ```
 
-## License
+## 🔮 Future Enhancements
 
-This project is part of the logWise Docker extension. 
+- Multi-modal log analysis
+- Advanced semantic chunking
+- Real-time analytics dashboard
+- Federated search across containers
+- Additional AI model integrations
+
+## 📝 License
+
+This project is part of the Dockerative Extension system. 

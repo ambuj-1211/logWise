@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/types/container";
 import { Calendar, ChevronLeft, ChevronRight, Container as DockerIcon, Image, Network, Pause, Play, Square } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 
 interface ContainerSidebarProps {
   containers: Container[];
@@ -15,7 +16,7 @@ const getStatusIcon = (status: Container['status']) => {
   switch (status) {
     case 'running':
       return <Play className="h-3 w-3 text-status-running" />;
-    case 'stopped':
+    case 'exited':
       return <Square className="h-3 w-3 text-status-stopped" />;
     case 'paused':
       return <Pause className="h-3 w-3 text-status-paused" />;
@@ -28,7 +29,7 @@ const getStatusColor = (status: Container['status']) => {
   switch (status) {
     case 'running':
       return 'bg-status-running text-white';
-    case 'stopped':
+    case 'exited':
       return 'bg-status-stopped text-white';
     case 'paused':
       return 'bg-status-paused text-white';
@@ -37,11 +38,101 @@ const getStatusColor = (status: Container['status']) => {
   }
 };
 
-export function ContainerSidebar({ containers, selectedContainer, onContainerSelect }: ContainerSidebarProps) {
+export function ContainerSidebar({ /*containers, selectedContainer, onContainerSelect*/ }: ContainerSidebarProps) {
+  // Manage all state internally instead of receiving it from props
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
 
   const runningContainers = containers.filter(container => container.status === 'running');
   const stoppedContainers = containers.filter(container => container.status !== 'running');
+
+  // Add the useEffect hook to fetch data via SSE
+  useEffect(() => {
+  const eventSource = new EventSource('http://127.0.0.1:8000/api/containers');
+
+  eventSource.onmessage = (event) => {
+    const newContainer = JSON.parse(event.data) as Container;
+    // Add the newly received container to our list
+    setContainers(prevContainers => [...prevContainers, newContainer]);
+  };
+
+  eventSource.onerror = (err) => {
+      console.error("EventSource failed:", err);
+      eventSource.close();
+    };
+
+    // Cleanup function to close the connection when the component unmounts
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+//   useEffect(() => {
+//     const eventSource = new EventSource('http://127.0.0.1:8000/api/containers');
+
+//     eventSource.onmessage = (event) => {
+//       const message = JSON.parse(event.data);
+
+//       // Check the 'type' of the message from the server
+//       if (message.type === 'initial_list') {
+//         // This is the first message, set the entire list
+//         setContainers(message.payload);
+
+//       } else if (message.type === 'event') {
+//         // This is a live update for a single container
+//         const { status, id, name } = message.payload;
+        
+//         setContainers(prevContainers => {
+//           // Find if the container is already in our list
+//           const existingContainerIndex = prevContainers.findIndex(c => c.id.startsWith(id));
+
+//           if (status === 'destroy') {
+//             // Remove the container from the list
+//             return prevContainers.filter(c => !c.id.startsWith(id));
+//           }
+
+//           if (existingContainerIndex !== -1) {
+//             // It exists, so we update it
+//             const updatedContainers = [...prevContainers];
+//             const containerToUpdate = updatedContainers[existingContainerIndex];
+            
+//             // Map docker's 'die' status to our 'stopped' status
+//             containerToUpdate.status = (status === 'die') ? 'stopped' : status;
+//             return updatedContainers;
+//           } else if (status === 'create') {
+//             // It's a new container, add it.
+//             // Note: The event doesn't give us all info like the image,
+//             // so we'd either need to make a separate API call for full details
+//             // or simplify what we show.
+//             const newContainer: Container = { 
+//                 id: id, 
+//                 name: name, 
+//                 status: 'exited', // A newly created container is not running yet
+//                 image: 'unknown', 
+//                 created: new Date().toISOString() 
+//             };
+//             return [...prevContainers, newContainer];
+//           }
+
+//           return prevContainers; // Return unchanged if no case matches
+//         });
+//       }
+//     };
+
+//     eventSource.onerror = (err) => {
+//       console.error("EventSource failed:", err);
+//       eventSource.close();
+//     };
+
+//     return () => {
+//       eventSource.close();
+//     };
+// }, []);
+
+  const handleContainerSelect = (container: Container) => {
+    setSelectedContainer(container);
+  };
 
   const renderContainerList = (containerList: Container[], groupName: string) => (
     <div className="mb-6">
@@ -50,9 +141,10 @@ export function ContainerSidebar({ containers, selectedContainer, onContainerSel
       </h3>
       <div className="space-y-1 px-2">
         {containerList.map((container) => (
+          //Update the onClick handler to use the internal function
           <button
             key={container.id}
-            onClick={() => onContainerSelect(container)}
+            onClick={() => handleContainerSelect(container)}
             className={`w-full ${isCollapsed ? 'p-2 justify-center' : 'p-3'} text-left hover:bg-accent rounded-lg transition-colors ${
               selectedContainer?.id === container.id 
                 ? 'bg-accent text-accent-foreground' 
